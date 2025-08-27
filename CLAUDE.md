@@ -4,7 +4,52 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Spring Boot email service sample project using Java 8. It's currently a basic Spring Boot application structure without email functionality implemented yet.
+This is a fully implemented Spring Boot email service that demonstrates how to send emails via SMTP and receive emails via IMAP. The application includes advanced features like email marking (read/unread, flagged, important), folder management, label system, duplicate prevention for multi-instance deployments, and optional S/MIME support for email encryption and digital signatures.
+
+## Key Features
+
+- **Email Sending**: SMTP-based email sending with template support
+- **Email Receiving**: IMAP polling with automatic synchronization
+- **Email Management**: Mark emails as read/unread, flagged, important, spam
+- **Folder System**: Organize emails in folders (Inbox, Sent, Drafts, Trash, Spam, Custom)
+- **Label System**: Add custom labels to emails for organization
+- **Duplicate Prevention**: Distributed locking mechanism for multi-instance deployments
+- **S/MIME Support**: Optional encryption and digital signature capabilities
+- **REST API**: Full REST API for email operations
+- **Async Processing**: Asynchronous email sending and scheduled polling
+- **Database Storage**: H2 database for email persistence
+
+## Architecture Overview
+
+### Core Components
+
+1. **Configuration Layer** (`config` package)
+   - `EmailProperties`: Configuration properties for SMTP/IMAP
+   - `EmailConfiguration`: Spring beans for mail services
+   - `SecurityConfiguration`: Security settings for S/MIME
+
+2. **Model Layer** (`model` package)
+   - `EmailMessage`: Main email entity with marking properties
+   - `EmailFolder`: Folder organization entity
+   - `EmailAttachment`: Email attachment handling
+   - `EmailCertificate`: S/MIME certificate management
+   - `EmailSyncState`: IMAP synchronization tracking
+
+3. **Service Layer** (`service` package)
+   - `EmailSenderService`: SMTP email sending with templates
+   - `EmailReceiverService`: IMAP polling and synchronization
+   - `EmailMarkingService`: Email marking operations
+   - `EmailFolderService`: Folder and label management
+   - `DistributedLockService`: Duplicate prevention locking
+   - `SMimeService`: S/MIME encryption/signing (structure ready)
+
+4. **REST API Layer** (`controller` package)
+   - `EmailController`: REST endpoints for all email operations
+   - `EmailExceptionHandler`: Global exception handling
+
+5. **Event System** (`event` package)
+   - `EmailEventPublisher`: Publishes email events
+   - `NewEmailEvent`: Event for new email arrivals
 
 ## Build and Run Commands
 
@@ -44,25 +89,115 @@ This is a Spring Boot email service sample project using Java 8. It's currently 
 ./mvnw test -Dtest=EmailServiceSampleApplicationTests
 ```
 
-## Project Structure
+## Database Access
 
-This is a Maven-based Spring Boot 2.7.9 application with the following key components:
+The application uses H2 database. Access the H2 console at:
+- URL: http://localhost:8080/h2-console
+- JDBC URL: `jdbc:h2:file:./data/emaildb`
+- Username: `sa`
+- Password: (empty)
 
-- **Main Application**: `EmailServiceSampleApplication.java` - Spring Boot entry point
-- **Configuration**: `application.properties` - Spring configuration
-- **Dependencies**: Lombok is included for reducing boilerplate code
-- **Java Version**: Java 8
+## Configuration
+
+Edit `src/main/resources/application.properties` to configure:
+- SMTP settings (host, port, credentials)
+- IMAP settings (host, port, credentials, poll interval)
+- S/MIME settings (certificates, algorithms)
+- Database settings
+
+### Environment Variables
+- `SMTP_USERNAME`: SMTP server username
+- `SMTP_PASSWORD`: SMTP server password
+- `IMAP_USERNAME`: IMAP server username
+- `IMAP_PASSWORD`: IMAP server password
+- `SMIME_KEYSTORE_PATH`: Path to S/MIME keystore
+- `SMIME_KEYSTORE_PASSWORD`: Keystore password
+
+## API Endpoints
+
+### Email Operations
+- `POST /api/v1/emails/send` - Send email
+- `POST /api/v1/emails/send-template` - Send templated email
+- `GET /api/v1/emails/inbox` - Get inbox emails with pagination
+- `GET /api/v1/emails/{messageId}` - Get specific email
+- `GET /api/v1/emails/search?query=` - Search emails
+
+### Email Marking
+- `PUT /api/v1/emails/{messageId}/mark-read` - Mark as read
+- `PUT /api/v1/emails/{messageId}/mark-unread` - Mark as unread
+- `PUT /api/v1/emails/{messageId}/toggle-flag` - Toggle flag
+- `PUT /api/v1/emails/{messageId}/mark-important` - Mark as important
+- `PUT /api/v1/emails/{messageId}/mark-spam` - Mark as spam
+- `PUT /api/v1/emails/bulk/mark-read` - Bulk mark as read
+
+### Folder Management
+- `GET /api/v1/emails/folders` - Get all folders
+- `POST /api/v1/emails/folders` - Create custom folder
+- `GET /api/v1/emails/folder/{folderId}` - Get emails in folder
+- `PUT /api/v1/emails/{messageId}/move-to-folder/{folderId}` - Move to folder
+
+### Labels
+- `PUT /api/v1/emails/{messageId}/labels/{label}` - Add label
+- `DELETE /api/v1/emails/{messageId}/labels/{label}` - Remove label
+
+### Statistics
+- `GET /api/v1/emails/stats/unread-count` - Get unread count
 
 ## Development Guidelines
 
-### Email Service Implementation
-When implementing email functionality:
-1. Consider adding Spring Boot Starter Mail dependency to `pom.xml`
-2. Create service classes in `com.igsl.group.email_service_sample.service` package
-3. Create configuration classes for email settings
-4. Use Lombok annotations to reduce boilerplate code
+### Java 8 Compatibility
+The project uses Java 8. Ensure compatibility:
+- Avoid using `var` keyword
+- Use ByteArrayOutputStream instead of `InputStream.readAllBytes()`
+- Use traditional lambda syntax
+
+### Service Implementation
+- Services are in `com.igsl.group.email_service_sample.service`
+- Use `@Service`, `@Transactional`, and `@Async` appropriately
+- Implement proper error handling and logging
+
+### Repository Pattern
+- Repositories extend `JpaRepository`
+- Custom queries use `@Query` annotation
+- Follow Spring Data JPA naming conventions
+
+### REST API Design
+- Use proper HTTP methods and status codes
+- Implement request validation with `@Valid`
+- Use DTOs for request/response mapping
 
 ### Testing
 - Use `@SpringBootTest` for integration tests
-- Create unit tests for individual components
-- Test naming convention: `*Tests.java` for test classes
+- Mock external dependencies with `@MockBean`
+- Test naming convention: `*Tests.java`
+
+## Pending Implementation
+
+### S/MIME Service
+The S/MIME service structure is in place but needs full implementation:
+1. Certificate management operations
+2. Email signing logic
+3. Email encryption/decryption logic
+4. Certificate validation and trust chain
+
+To complete S/MIME:
+- Implement `SMimeService` methods
+- Add Bouncy Castle provider initialization
+- Create certificate storage mechanism
+- Implement certificate discovery from emails
+
+## Troubleshooting
+
+### Common Issues
+1. **Email not sending**: Check SMTP credentials and firewall settings
+2. **IMAP not connecting**: Verify IMAP settings and SSL/TLS configuration
+3. **Duplicate emails**: Ensure distributed lock service is working
+4. **H2 database locked**: Stop all application instances before accessing H2 console
+
+### Debug Mode
+Enable debug logging by setting in `application.properties`:
+```properties
+email.general.debug-enabled=true
+logging.level.org.springframework.mail=DEBUG
+logging.level.javax.mail=DEBUG
+```
