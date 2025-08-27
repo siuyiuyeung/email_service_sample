@@ -1,18 +1,18 @@
 package com.igsl.group.email_service_sample.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "email_attachments")
+@EqualsAndHashCode(exclude = "content")
+@ToString(exclude = "content")
 public class EmailAttachment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

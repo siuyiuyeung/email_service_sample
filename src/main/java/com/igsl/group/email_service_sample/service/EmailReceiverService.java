@@ -45,7 +45,7 @@ public class EmailReceiverService {
     public void pollEmails() {
         String lockKey = "imap_sync_" + properties.getImap().getFolder();
         
-        if (!lockService.acquireLock(lockKey, Duration.ofMinutes(5))) {
+        if (!lockService.acquireLock(lockKey, Duration.ofMinutes(1))) {
             log.info("Another instance is already syncing folder: {}", 
                     properties.getImap().getFolder());
             return;
@@ -168,12 +168,8 @@ public class EmailReceiverService {
         emailMessage.setFlagged(message.isSet(Flags.Flag.FLAGGED));
         emailMessage.setDeleted(message.isSet(Flags.Flag.DELETED));
         
-        // Extract headers
-        Enumeration<Header> headers = message.getAllHeaders();
-        while (headers.hasMoreElements()) {
-            Header header = headers.nextElement();
-            emailMessage.getHeaders().put(header.getName(), header.getValue());
-        }
+        // Extract important headers only
+        extractImportantHeaders(message, emailMessage);
         
         return emailMessage;
     }
@@ -222,6 +218,34 @@ public class EmailReceiverService {
         return Arrays.stream(addresses)
             .map(addr -> ((InternetAddress) addr).getAddress())
             .collect(Collectors.toList());
+    }
+    
+    private void extractImportantHeaders(MimeMessage message, EmailMessage emailMessage) throws Exception {
+        // Define important headers to keep
+        Set<String> importantHeaders = new HashSet<>(Arrays.asList(
+            "Message-ID", "In-Reply-To", "References", "Reply-To",
+            "Return-Path", "X-Priority", "X-Mailer", "Content-Type",
+            "MIME-Version", "X-Spam-Score", "X-Spam-Flag"
+        ));
+        
+        Enumeration<Header> headers = message.getAllHeaders();
+        while (headers.hasMoreElements()) {
+            Header header = headers.nextElement();
+            String headerName = header.getName();
+            String headerValue = header.getValue();
+            
+            // Only store important headers or those that aren't too long
+            if (importantHeaders.contains(headerName) || 
+                (headerValue != null && headerValue.length() <= 500)) {
+                
+                // Truncate very long header values
+                if (headerValue != null && headerValue.length() > 1000) {
+                    headerValue = headerValue.substring(0, 997) + "...";
+                }
+                
+                emailMessage.getHeaders().put(headerName, headerValue);
+            }
+        }
     }
     
     public List<EmailMessage> fetchEmails(int maxMessages) {

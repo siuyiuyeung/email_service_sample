@@ -1,20 +1,20 @@
 package com.igsl.group.email_service_sample.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "email_folders")
+@EqualsAndHashCode(exclude = "emails")
+@ToString(exclude = "emails")
 public class EmailFolder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,5 +30,6 @@ public class EmailFolder {
     private int displayOrder;
     
     @ManyToMany(mappedBy = "folders")
+    @Builder.Default
     private Set<EmailMessage> emails = new HashSet<>();
 }

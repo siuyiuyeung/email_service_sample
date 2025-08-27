@@ -1,33 +1,40 @@
 package com.igsl.group.email_service_sample.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
 @Table(name = "email_messages")
+@EqualsAndHashCode(exclude = {"attachments", "folders"})
+@ToString(exclude = {"attachments", "folders"})
 public class EmailMessage {
     @Id
     private String messageId;
-    
+
+    @Column(name = "from_address")
     private String from;
-    
+
+    @Column(name = "to_addresses")
     @ElementCollection
+    @Builder.Default
     private List<String> to = new ArrayList<>();
-    
+
+    @Column(name = "cc_addresses")
     @ElementCollection
+    @Builder.Default
     private List<String> cc = new ArrayList<>();
-    
+
+    @Column(name = "bcc_addresses")
     @ElementCollection
+    @Builder.Default
     private List<String> bcc = new ArrayList<>();
     
     private String subject;
@@ -42,9 +49,15 @@ public class EmailMessage {
     private LocalDateTime receivedDate;
     
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<EmailAttachment> attachments = new ArrayList<>();
     
     @ElementCollection
+    @CollectionTable(name = "email_message_headers", 
+                     joinColumns = @JoinColumn(name = "email_message_id"))
+    @MapKeyColumn(name = "header_key")
+    @Column(name = "header_value", columnDefinition = "TEXT")
+    @Builder.Default
     private Map<String, String> headers = new HashMap<>();
     
     @Enumerated(EnumType.STRING)
@@ -61,9 +74,11 @@ public class EmailMessage {
     
     @ManyToMany
     @JoinTable(name = "email_folder_mapping")
+    @Builder.Default
     private Set<EmailFolder> folders = new HashSet<>();
     
     @ElementCollection
+    @Builder.Default
     private Set<String> labels = new HashSet<>();
     
     private LocalDateTime readDate;
@@ -82,6 +97,7 @@ public class EmailMessage {
     private LocalDateTime signatureTimestamp;
     
     @ElementCollection
+    @Builder.Default
     private List<String> encryptionRecipients = new ArrayList<>();
     
     @Enumerated(EnumType.STRING)
