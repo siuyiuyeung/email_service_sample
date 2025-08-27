@@ -37,17 +37,25 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
 
 3. **Service Layer** (`service` package)
    - `EmailSenderService`: SMTP email sending with templates
-   - `EmailReceiverService`: IMAP polling and synchronization
+   - `EmailReceiverService`: IMAP email synchronization logic
    - `EmailMarkingService`: Email marking operations
    - `EmailFolderService`: Folder and label management
    - `DistributedLockService`: Duplicate prevention locking
+   - `EmailDTOMapper`: Entity to DTO conversion service
    - `SMimeService`: S/MIME encryption/signing (structure ready)
 
 4. **REST API Layer** (`controller` package)
    - `EmailController`: REST endpoints for all email operations
+   - `EmailPollingController`: REST endpoints for manual polling control
+   - `LockManagementController`: REST endpoints for lock management
    - `EmailExceptionHandler`: Global exception handling
 
-5. **Event System** (`event` package)
+5. **Scheduler Layer** (`scheduler` package)
+   - `EmailPollingScheduler`: Handles scheduled email polling
+   - `LockCleanupScheduler`: Handles scheduled lock cleanup
+   - `SchedulerConfiguration`: Enables Spring scheduling
+
+6. **Event System** (`event` package)
    - `EmailEventPublisher`: Publishes email events
    - `NewEmailEvent`: Event for new email arrivals
 
@@ -142,6 +150,13 @@ Edit `src/main/resources/application.properties` to configure:
 
 ### Statistics
 - `GET /api/v1/emails/stats/unread-count` - Get unread count
+
+### Email Polling Control
+- `POST /api/v1/email-polling/trigger` - Manually trigger email synchronization
+- `GET /api/v1/email-polling/status` - Get current polling status
+
+### Lock Management
+- `POST /api/v1/locks/cleanup` - Manually trigger cleanup of expired locks
 
 ## Development Guidelines
 

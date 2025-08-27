@@ -13,5 +13,5 @@ import java.time.LocalDateTime;
 public interface SyncLockRepository extends JpaRepository<SyncLock, String> {
     @Modifying
     @Query("DELETE FROM SyncLock s WHERE s.expiresAt < :now")
-    void deleteExpiredLocks(@Param("now") LocalDateTime now);
+    int deleteExpiredLocks(@Param("now") LocalDateTime now);
 }

@@ -10,7 +10,6 @@ import com.igsl.group.email_service_sample.repository.EmailSyncStateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,22 +40,10 @@ public class EmailReceiverService {
     private final EmailEventPublisher eventPublisher;
     private final DistributedLockService lockService;
     
-    @Scheduled(fixedDelayString = "${email.imap.poll-interval:60000}")
-    public void pollEmails() {
-        String lockKey = "imap_sync_" + properties.getImap().getFolder();
-        
-        if (!lockService.acquireLock(lockKey, Duration.ofMinutes(1))) {
-            log.info("Another instance is already syncing folder: {}", 
-                    properties.getImap().getFolder());
-            return;
-        }
-        
-        try {
-            performEmailSync();
-        } finally {
-            lockService.releaseLock(lockKey);
-        }
-    }
+    /**
+     * Performs email synchronization from IMAP server.
+     * This method is now called by EmailPollingScheduler instead of being scheduled directly.
+     */
     
     @Transactional
     public void performEmailSync() {
@@ -246,14 +233,6 @@ public class EmailReceiverService {
                 emailMessage.getHeaders().put(headerName, headerValue);
             }
         }
-    }
-    
-    public List<EmailMessage> fetchEmails(int maxMessages) {
-        // Implementation for fetching emails with pagination
-        return messageRepository.findAll()
-            .stream()
-            .limit(maxMessages)
-            .collect(Collectors.toList());
     }
     
     public EmailMessage fetchEmailById(String messageId) {

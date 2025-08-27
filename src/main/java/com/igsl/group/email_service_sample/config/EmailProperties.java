@@ -34,6 +34,13 @@ public class EmailProperties {
         private String folder = "INBOX";
         private boolean ssl = true;
         private int pollInterval = 60000; // 1 minute
+        private Integer pollLockDurationMinutes; // Optional, defaults to 5 in scheduler
+        private Polling polling = new Polling();
+    }
+    
+    @Data
+    public static class Polling {
+        private boolean enabled = true;
     }
     
     @Data

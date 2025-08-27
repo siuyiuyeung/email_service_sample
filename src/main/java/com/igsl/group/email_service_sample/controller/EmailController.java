@@ -7,6 +7,7 @@ import com.igsl.group.email_service_sample.model.EmailMessage;
 import com.igsl.group.email_service_sample.model.EmailStatus;
 import com.igsl.group.email_service_sample.repository.EmailFolderRepository;
 import com.igsl.group.email_service_sample.repository.EmailMessageRepository;
+import com.igsl.group.email_service_sample.service.EmailDTOMapper;
 import com.igsl.group.email_service_sample.service.EmailFolderService;
 import com.igsl.group.email_service_sample.service.EmailMarkingService;
 import com.igsl.group.email_service_sample.service.EmailReceiverService;
@@ -36,6 +37,7 @@ public class EmailController {
     private final EmailFolderService folderService;
     private final EmailMessageRepository messageRepository;
     private final EmailFolderRepository folderRepository;
+    private final EmailDTOMapper dtoMapper;
     
     // Sending endpoints
     @PostMapping("/send")
@@ -60,7 +62,7 @@ public class EmailController {
     
     // Inbox and folder endpoints
     @GetMapping("/inbox")
-    public ResponseEntity<Page<EmailMessage>> getInboxEmails(
+    public ResponseEntity<Page<EmailMessageSummaryDTO>> getInboxEmails(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String filter) {
@@ -86,11 +88,11 @@ public class EmailController {
             }
         }
         
-        return ResponseEntity.ok(emails);
+        return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
     }
     
     @GetMapping("/folder/{folderId}")
-    public ResponseEntity<Page<EmailMessage>> getFolderEmails(
+    public ResponseEntity<Page<EmailMessageSummaryDTO>> getFolderEmails(
             @PathVariable Long folderId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -101,57 +103,57 @@ public class EmailController {
         Pageable pageable = PageRequest.of(page, size);
         Page<EmailMessage> emails = messageRepository.findByFoldersContainingAndIsDeletedFalse(folder, pageable);
         
-        return ResponseEntity.ok(emails);
+        return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
     }
     
     @GetMapping("/search")
-    public ResponseEntity<Page<EmailMessage>> searchEmails(
+    public ResponseEntity<Page<EmailMessageSummaryDTO>> searchEmails(
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         
         Pageable pageable = PageRequest.of(page, size);
         Page<EmailMessage> emails = messageRepository.searchEmails(query, pageable);
-        return ResponseEntity.ok(emails);
+        return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
     }
     
     @GetMapping("/{messageId}")
-    public ResponseEntity<EmailMessage> getEmail(@PathVariable String messageId) {
+    public ResponseEntity<EmailMessageDTO> getEmail(@PathVariable String messageId) {
         EmailMessage email = receiverService.fetchEmailById(messageId);
         if (email != null && !email.isRead()) {
             markingService.markAsRead(messageId);
         }
-        return email != null ? ResponseEntity.ok(email) : ResponseEntity.notFound().build();
+        return email != null ? ResponseEntity.ok(dtoMapper.toEmailMessageDTO(email)) : ResponseEntity.notFound().build();
     }
     
     // Marking endpoints
     @PutMapping("/{messageId}/mark-read")
-    public ResponseEntity<EmailMessage> markAsRead(@PathVariable String messageId) {
-        return ResponseEntity.ok(markingService.markAsRead(messageId));
+    public ResponseEntity<EmailMessageDTO> markAsRead(@PathVariable String messageId) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsRead(messageId)));
     }
     
     @PutMapping("/{messageId}/mark-unread")
-    public ResponseEntity<EmailMessage> markAsUnread(@PathVariable String messageId) {
-        return ResponseEntity.ok(markingService.markAsUnread(messageId));
+    public ResponseEntity<EmailMessageDTO> markAsUnread(@PathVariable String messageId) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsUnread(messageId)));
     }
     
     @PutMapping("/{messageId}/toggle-flag")
-    public ResponseEntity<EmailMessage> toggleFlag(@PathVariable String messageId) {
-        return ResponseEntity.ok(markingService.toggleFlag(messageId));
+    public ResponseEntity<EmailMessageDTO> toggleFlag(@PathVariable String messageId) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.toggleFlag(messageId)));
     }
     
     @PutMapping("/{messageId}/mark-important")
-    public ResponseEntity<EmailMessage> markAsImportant(
+    public ResponseEntity<EmailMessageDTO> markAsImportant(
             @PathVariable String messageId,
             @RequestParam boolean important) {
-        return ResponseEntity.ok(markingService.markAsImportant(messageId, important));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsImportant(messageId, important)));
     }
     
     @PutMapping("/{messageId}/mark-spam")
-    public ResponseEntity<EmailMessage> markAsSpam(
+    public ResponseEntity<EmailMessageDTO> markAsSpam(
             @PathVariable String messageId,
             @RequestParam boolean spam) {
-        return ResponseEntity.ok(markingService.markAsSpam(messageId, spam));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsSpam(messageId, spam)));
     }
     
     // Bulk operations
@@ -163,36 +165,39 @@ public class EmailController {
     
     // Folder management
     @GetMapping("/folders")
-    public ResponseEntity<List<EmailFolder>> getFolders() {
-        return ResponseEntity.ok(folderService.getAllFolders());
+    public ResponseEntity<List<EmailFolderDTO>> getFolders() {
+        return ResponseEntity.ok(folderService.getAllFolders().stream()
+                .map(dtoMapper::toEmailFolderDTO)
+                .collect(Collectors.toList()));
     }
     
     @PostMapping("/folders")
-    public ResponseEntity<EmailFolder> createFolder(@Valid @RequestBody CreateFolderRequest request) {
-        return ResponseEntity.ok(folderService.createCustomFolder(
-            request.getName(), request.getDisplayName(), request.getIcon()));
+    public ResponseEntity<EmailFolderDTO> createFolder(@Valid @RequestBody CreateFolderRequest request) {
+        EmailFolder folder = folderService.createCustomFolder(
+            request.getName(), request.getDisplayName(), request.getIcon());
+        return ResponseEntity.ok(dtoMapper.toEmailFolderDTO(folder));
     }
     
     @PutMapping("/{messageId}/move-to-folder/{folderId}")
-    public ResponseEntity<EmailMessage> moveToFolder(
+    public ResponseEntity<EmailMessageDTO> moveToFolder(
             @PathVariable String messageId,
             @PathVariable Long folderId) {
-        return ResponseEntity.ok(folderService.moveToFolder(messageId, folderId));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.moveToFolder(messageId, folderId)));
     }
     
     // Labels
     @PutMapping("/{messageId}/labels/{label}")
-    public ResponseEntity<EmailMessage> addLabel(
+    public ResponseEntity<EmailMessageDTO> addLabel(
             @PathVariable String messageId,
             @PathVariable String label) {
-        return ResponseEntity.ok(folderService.addLabel(messageId, label));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.addLabel(messageId, label)));
     }
     
     @DeleteMapping("/{messageId}/labels/{label}")
-    public ResponseEntity<EmailMessage> removeLabel(
+    public ResponseEntity<EmailMessageDTO> removeLabel(
             @PathVariable String messageId,
             @PathVariable String label) {
-        return ResponseEntity.ok(folderService.removeLabel(messageId, label));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.removeLabel(messageId, label)));
     }
     
     // Statistics

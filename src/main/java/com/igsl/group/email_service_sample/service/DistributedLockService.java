@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,25 +21,20 @@ public class DistributedLockService {
     private final SyncLockRepository lockRepository;
     private final String instanceId = UUID.randomUUID().toString();
     
+    /**
+     * Clean up expired locks. This method can be called programmatically
+     * when immediate cleanup is needed. Regular cleanup is handled by
+     * LockCleanupScheduler.
+     */
     @Transactional
-    public void cleanupExpiredLocks() {
+    public int cleanupExpiredLocks() {
         try {
-            lockRepository.deleteExpiredLocks(LocalDateTime.now());
-            log.info("Cleaned up expired locks");
+            int deletedCount = lockRepository.deleteExpiredLocks(LocalDateTime.now());
+            log.info("Cleaned up {} expired locks", deletedCount);
+            return deletedCount;
         } catch (Exception e) {
             log.error("Error cleaning up expired locks", e);
-        }
-    }
-    
-    // Run cleanup every 5 minutes
-    @Scheduled(fixedDelay = 300000)
-    @Transactional
-    public void scheduledCleanup() {
-        try {
-            lockRepository.deleteExpiredLocks(LocalDateTime.now());
-            log.debug("Scheduled cleanup: cleaned up expired locks");
-        } catch (Exception e) {
-            log.error("Error during scheduled cleanup of expired locks", e);
+            return 0;
         }
     }
     
