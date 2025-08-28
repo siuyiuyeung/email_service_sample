@@ -108,28 +108,9 @@ public class EmailReceiverService {
                                 highestUid = result.uid;
                             }
                         }
-                        
-                        // Update sync state after every message for fine-grained progress tracking
-                        try {
-                            syncState.setLastProcessedMessageDate(latestMessageDate);
-                            syncState.setLastModified(LocalDateTime.now());
-                            // Update last sync date to track progress
-                            if (latestMessageDate.after(syncState.getLastSyncDate())) {
-                                syncState.setLastSyncDate(latestMessageDate);
-                            }
-                            syncState.setMessagesProcessed(syncState.getMessagesProcessed() + (long) processed);
-                            syncState.setHighestUidSeen(highestUid);
-                            syncStateRepository.save(syncState);
-                            syncStateRepository.flush();
-                            
-                            if (processed % 25 == 0) {
-                                log.debug("Progress: processed {} of {} messages in this batch, highest UID: {}", 
-                                    processed, messagesToProcess, highestUid);
-                            }
-                        } catch (Exception e) {
-                            log.warn("Failed to update sync state after processing message, continuing anyway", e);
-                            // Continue processing even if sync state update fails
-                        }
+
+                        syncState.setMessagesProcessed(syncState.getMessagesProcessed() + 1);
+                        syncState.setHighestUidSeen(highestUid);
                     }
                     
                 } catch (Exception e) {
@@ -141,8 +122,6 @@ public class EmailReceiverService {
             // Final update of sync state
             syncState.setLastSyncDate(latestMessageDate);
             syncState.setLastProcessedMessageDate(latestMessageDate);
-            syncState.setMessagesProcessed((long) processed);
-            syncState.setHighestUidSeen(highestUid);
             if (folder instanceof UIDFolder) {
                 syncState.setLastUidValidity(((UIDFolder) folder).getUIDValidity());
             }
@@ -206,8 +185,6 @@ public class EmailReceiverService {
             
             // Publish event
             eventPublisher.publishNewEmailEvent(emailMessage);
-
-            messageRepository.flush();
 
             log.info("Processed new email: {} from {}", emailMessage.getSubject(), emailMessage.getFrom());
             
