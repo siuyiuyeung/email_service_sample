@@ -9,11 +9,12 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
 ## Key Features
 
 - **Email Sending**: SMTP-based email sending with template support
-- **Email Receiving**: IMAP polling with automatic synchronization
+- **Email Receiving**: IMAP polling with automatic synchronization and batch processing
 - **Email Management**: Mark emails as read/unread, flagged, important, spam
 - **Folder System**: Organize emails in folders (Inbox, Sent, Drafts, Trash, Spam, Custom)
 - **Label System**: Add custom labels to emails for organization
 - **Duplicate Prevention**: Distributed locking mechanism for multi-instance deployments
+- **Batch Processing**: Configurable batch size for email synchronization with progress tracking
 - **S/MIME Support**: Optional encryption and digital signature capabilities
 - **REST API**: Full REST API for email operations
 - **Async Processing**: Asynchronous email sending and scheduled polling
@@ -109,9 +110,10 @@ The application uses H2 database. Access the H2 console at:
 
 Edit `src/main/resources/application.properties` to configure:
 - SMTP settings (host, port, credentials)
-- IMAP settings (host, port, credentials, poll interval)
+- IMAP settings (host, port, credentials, poll interval, batch size)
 - S/MIME settings (certificates, algorithms)
 - Database settings
+- Batch processing settings
 
 ### Environment Variables
 - `SMTP_USERNAME`: SMTP server username
@@ -120,6 +122,14 @@ Edit `src/main/resources/application.properties` to configure:
 - `IMAP_PASSWORD`: IMAP server password
 - `SMIME_KEYSTORE_PATH`: Path to S/MIME keystore
 - `SMIME_KEYSTORE_PASSWORD`: Keystore password
+
+### Batch Processing Configuration
+- `email.imap.batch-size`: Maximum number of emails to process per job execution (default: 100)
+- Each scheduled job processes up to batch-size messages then stops
+- Remaining messages are processed in subsequent job runs
+- Messages are processed in chronological order (oldest first)
+- Progress is saved after every message for precise resumption capability
+- Memory-efficient processing prevents long-running jobs
 
 ## API Endpoints
 
@@ -154,6 +164,8 @@ Edit `src/main/resources/application.properties` to configure:
 ### Email Polling Control
 - `POST /api/v1/email-polling/trigger` - Manually trigger email synchronization
 - `GET /api/v1/email-polling/status` - Get current polling status
+- `GET /api/v1/email-polling/progress` - Get sync progress for all folders
+- `GET /api/v1/email-polling/progress/{folderName}` - Get sync progress for specific folder
 
 ### Lock Management
 - `POST /api/v1/locks/cleanup` - Manually trigger cleanup of expired locks
@@ -170,6 +182,10 @@ The project uses Java 8. Ensure compatibility:
 - Services are in `com.igsl.group.email_service_sample.service`
 - Use `@Service`, `@Transactional`, and `@Async` appropriately
 - Implement proper error handling and logging
+- Batch processing: Each sync job processes up to batch-size messages (default 100) then stops
+- Progressive sync: Remaining messages are processed in subsequent scheduled jobs
+- Chronological order: Messages are processed oldest first to maintain proper sequence
+- Progress tracking: Sync state is updated after every message for precise resumption capability
 
 ### Repository Pattern
 - Repositories extend `JpaRepository`

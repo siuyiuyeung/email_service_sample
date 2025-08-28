@@ -36,6 +36,7 @@ public class EmailProperties {
         private int pollInterval = 60000; // 1 minute
         private Integer pollLockDurationMinutes; // Optional, defaults to 5 in scheduler
         private Polling polling = new Polling();
+        private int batchSize = 100; // Default batch size for processing emails
     }
     
     @Data

@@ -25,6 +25,9 @@ public class EmailSyncState {
     private Long lastUidValidity;
     private Long highestUidSeen;
     private LocalDateTime lastModified;
+    private Long messagesProcessed;
+    private Long totalMessagesFound;
+    private Date lastProcessedMessageDate;
     
     public EmailSyncState(String folderName) {
         this.folderName = folderName;

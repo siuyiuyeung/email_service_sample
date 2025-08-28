@@ -56,22 +56,94 @@ public class EmailReceiverService {
                 .findByFolderName(folder.getName())
                 .orElse(new EmailSyncState(folder.getName()));
             
-            // Search for new messages
+            // Search for new messages since last sync
             SearchTerm searchTerm = new ReceivedDateTerm(ComparisonTerm.GT, syncState.getLastSyncDate());
             Message[] messages = folder.search(searchTerm);
             
-            log.info("Found {} new messages in folder {}", messages.length, folder.getName());
+            int totalMessages = messages.length;
+            int batchSize = properties.getImap().getBatchSize();
             
-            for (Message message : messages) {
-                processMessage(message, folder.getName());
+            if (totalMessages == 0) {
+                log.debug("No new messages found in folder {}", folder.getName());
+                folder.close(false);
+                return;
             }
             
-            // Update sync state
-            syncState.setLastSyncDate(new Date());
+            log.info("Found {} new messages in folder {}. Processing up to {} messages in this job", 
+                totalMessages, folder.getName(), batchSize);
+            
+            // Update sync state with total messages found
+            syncState.setTotalMessagesFound((long) totalMessages);
+            syncState.setMessagesProcessed(0L);
+            syncState.setLastModified(LocalDateTime.now());
+            syncStateRepository.save(syncState);
+            
+            // Process only up to batchSize messages in this job
+            int messagesToProcess = Math.min(totalMessages, batchSize);
+            int processed = 0;
+            Date latestMessageDate = syncState.getLastSyncDate();
+            
+            log.info("Processing {} messages in this job (out of {} total new messages)", 
+                messagesToProcess, totalMessages);
+            
+            for (int i = 0; i < messagesToProcess; i++) {
+                try {
+                    Message message = messages[i];
+                    boolean success = processMessage(message, folder.getName());
+                    
+                    if (success) {
+                        processed++;
+                        
+                        // Track latest message date for next sync
+                        Date messageDate = message.getReceivedDate();
+                        if (messageDate != null && messageDate.after(latestMessageDate)) {
+                            latestMessageDate = messageDate;
+                        }
+                        
+                        // Update sync state after every message for fine-grained progress tracking
+                        try {
+                            syncState.setLastProcessedMessageDate(latestMessageDate);
+                            syncState.setLastModified(LocalDateTime.now());
+                            // Update last sync date to track progress
+                            if (latestMessageDate.after(syncState.getLastSyncDate())) {
+                                syncState.setLastSyncDate(latestMessageDate);
+                            }
+                            syncState.setMessagesProcessed((long) processed);
+                            syncStateRepository.save(syncState);
+                            
+                            if (processed % 25 == 0) {
+                                log.debug("Progress: processed {} of {} messages in this batch", 
+                                    processed, messagesToProcess);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to update sync state after processing message, continuing anyway", e);
+                            // Continue processing even if sync state update fails
+                        }
+                    }
+                    
+                } catch (Exception e) {
+                    log.error("Error processing message {} in batch", i + 1, e);
+                    // Continue processing other messages
+                }
+            }
+            
+            // Final update of sync state
+            syncState.setLastSyncDate(latestMessageDate);
+            syncState.setLastProcessedMessageDate(latestMessageDate);
+            syncState.setMessagesProcessed((long) processed);
             if (folder instanceof UIDFolder) {
                 syncState.setLastUidValidity(((UIDFolder) folder).getUIDValidity());
             }
+            syncState.setLastModified(LocalDateTime.now());
             syncStateRepository.save(syncState);
+            
+            // Log summary
+            if (processed < totalMessages) {
+                log.info("Email sync job completed. Processed {} messages. {} messages remaining for next job", 
+                    processed, totalMessages - processed);
+            } else {
+                log.info("Email sync job completed. Processed all {} new messages", processed);
+            }
             
             folder.close(false);
         } catch (Exception e) {
@@ -80,10 +152,10 @@ public class EmailReceiverService {
     }
     
     @Transactional
-    public void processMessage(Message message, String folderName) {
+    public boolean processMessage(Message message, String folderName) {
         try {
             if (!(message instanceof MimeMessage)) {
-                return;
+                return false;
             }
             
             MimeMessage mimeMessage = (MimeMessage) message;
@@ -95,7 +167,7 @@ public class EmailReceiverService {
                 // Check if email already exists (idempotency)
                 if (messageRepository.findByImapUidAndImapFolder(uid, folderName).isPresent()) {
                     log.debug("Email already synced: UID={}, Folder={}", uid, folderName);
-                    return;
+                    return false; // Not an error, but not processed
                 }
             }
             
@@ -114,8 +186,11 @@ public class EmailReceiverService {
             
             log.info("Processed new email: {} from {}", emailMessage.getSubject(), emailMessage.getFrom());
             
+            return true; // Successfully processed
+            
         } catch (Exception e) {
             log.error("Error processing message", e);
+            return false;
         }
     }
     
