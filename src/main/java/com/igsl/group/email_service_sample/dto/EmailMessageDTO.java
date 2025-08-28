@@ -16,6 +16,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EmailMessageDTO {
+    private Long id;
     private String messageId;
     private String from;
     private List<String> to = new ArrayList<>();

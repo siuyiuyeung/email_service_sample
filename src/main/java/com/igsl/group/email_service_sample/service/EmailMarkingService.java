@@ -26,7 +26,7 @@ public class EmailMarkingService {
     private final Store imapStore;
     
     public EmailMessage markAsRead(String messageId) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.setRead(true);
@@ -39,7 +39,7 @@ public class EmailMarkingService {
     }
     
     public EmailMessage markAsUnread(String messageId) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.setRead(false);
@@ -52,7 +52,7 @@ public class EmailMarkingService {
     }
     
     public EmailMessage toggleFlag(String messageId) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.setFlagged(!email.isFlagged());
@@ -65,7 +65,7 @@ public class EmailMarkingService {
     }
     
     public EmailMessage markAsImportant(String messageId, boolean important) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.setImportant(important);
@@ -73,7 +73,7 @@ public class EmailMarkingService {
     }
     
     public EmailMessage markAsSpam(String messageId, boolean spam) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.setSpam(spam);
@@ -90,10 +90,13 @@ public class EmailMarkingService {
     }
     
     public void markMultipleAsRead(List<String> messageIds) {
-        messageRepository.findAllById(messageIds).forEach(email -> {
-            email.setRead(true);
-            email.setReadDate(LocalDateTime.now());
-            updateImapFlag(email, Flags.Flag.SEEN, true);
+        messageIds.forEach(messageId -> {
+            messageRepository.findByMessageId(messageId).ifPresent(email -> {
+                email.setRead(true);
+                email.setReadDate(LocalDateTime.now());
+                updateImapFlag(email, Flags.Flag.SEEN, true);
+                messageRepository.save(email);
+            });
         });
     }
     

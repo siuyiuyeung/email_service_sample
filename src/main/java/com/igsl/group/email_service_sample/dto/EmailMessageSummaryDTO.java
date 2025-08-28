@@ -14,6 +14,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EmailMessageSummaryDTO {
+    private Long id;
     private String messageId;
     private String from;
     private String subject;

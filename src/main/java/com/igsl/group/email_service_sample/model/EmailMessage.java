@@ -12,11 +12,18 @@ import java.util.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "email_messages")
+@Table(name = "email_messages", indexes = {
+    @Index(name = "idx_message_id", columnList = "messageId", unique = true),
+    @Index(name = "idx_imap_uid_folder", columnList = "imapUid,imapFolder")
+})
 @EqualsAndHashCode(exclude = {"attachments", "folders"})
 @ToString(exclude = {"attachments", "folders"})
 public class EmailMessage {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false)
     private String messageId;
 
     @Column(name = "from_address")

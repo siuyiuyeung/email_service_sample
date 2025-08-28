@@ -119,7 +119,7 @@ public class EmailController {
     
     @GetMapping("/{messageId}")
     public ResponseEntity<EmailMessageDTO> getEmail(@PathVariable String messageId) {
-        EmailMessage email = receiverService.fetchEmailById(messageId);
+        EmailMessage email = receiverService.fetchEmailByMessageId(messageId);
         if (email != null && !email.isRead()) {
             markingService.markAsRead(messageId);
         }

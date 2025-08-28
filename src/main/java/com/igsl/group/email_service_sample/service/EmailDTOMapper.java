@@ -25,6 +25,7 @@ public class EmailDTOMapper {
         }
         
         return EmailMessageDTO.builder()
+                .id(entity.getId())
                 .messageId(entity.getMessageId())
                 .from(entity.getFrom())
                 .to(entity.getTo())
@@ -74,6 +75,7 @@ public class EmailDTOMapper {
         }
         
         return EmailMessageSummaryDTO.builder()
+                .id(entity.getId())
                 .messageId(entity.getMessageId())
                 .from(entity.getFrom())
                 .subject(entity.getSubject())

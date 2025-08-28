@@ -82,6 +82,7 @@ public class EmailReceiverService {
             int messagesToProcess = Math.min(totalMessages, batchSize);
             int processed = 0;
             Date latestMessageDate = syncState.getLastSyncDate();
+            Long highestUid = syncState.getHighestUidSeen();
             
             log.info("Processing {} messages in this job (out of {} total new messages)", 
                 messagesToProcess, totalMessages);
@@ -89,7 +90,8 @@ public class EmailReceiverService {
             for (int i = 0; i < messagesToProcess; i++) {
                 try {
                     Message message = messages[i];
-                    boolean success = processMessage(message, folder.getName());
+                    ProcessResult result = processMessageWithUid(message, folder.getName());
+                    boolean success = result.success;
                     
                     if (success) {
                         processed++;
@@ -100,6 +102,13 @@ public class EmailReceiverService {
                             latestMessageDate = messageDate;
                         }
                         
+                        // Track highest UID
+                        if (result.uid != null) {
+                            if (highestUid == null || result.uid > highestUid) {
+                                highestUid = result.uid;
+                            }
+                        }
+                        
                         // Update sync state after every message for fine-grained progress tracking
                         try {
                             syncState.setLastProcessedMessageDate(latestMessageDate);
@@ -108,12 +117,14 @@ public class EmailReceiverService {
                             if (latestMessageDate.after(syncState.getLastSyncDate())) {
                                 syncState.setLastSyncDate(latestMessageDate);
                             }
-                            syncState.setMessagesProcessed((long) processed);
+                            syncState.setMessagesProcessed(syncState.getMessagesProcessed() + (long) processed);
+                            syncState.setHighestUidSeen(highestUid);
                             syncStateRepository.save(syncState);
+                            syncStateRepository.flush();
                             
                             if (processed % 25 == 0) {
-                                log.debug("Progress: processed {} of {} messages in this batch", 
-                                    processed, messagesToProcess);
+                                log.debug("Progress: processed {} of {} messages in this batch, highest UID: {}", 
+                                    processed, messagesToProcess, highestUid);
                             }
                         } catch (Exception e) {
                             log.warn("Failed to update sync state after processing message, continuing anyway", e);
@@ -131,6 +142,7 @@ public class EmailReceiverService {
             syncState.setLastSyncDate(latestMessageDate);
             syncState.setLastProcessedMessageDate(latestMessageDate);
             syncState.setMessagesProcessed((long) processed);
+            syncState.setHighestUidSeen(highestUid);
             if (folder instanceof UIDFolder) {
                 syncState.setLastUidValidity(((UIDFolder) folder).getUIDValidity());
             }
@@ -151,11 +163,22 @@ public class EmailReceiverService {
         }
     }
     
+    // Inner class to hold processing result
+    private static class ProcessResult {
+        final boolean success;
+        final Long uid;
+        
+        ProcessResult(boolean success, Long uid) {
+            this.success = success;
+            this.uid = uid;
+        }
+    }
+    
     @Transactional
-    public boolean processMessage(Message message, String folderName) {
+    public ProcessResult processMessageWithUid(Message message, String folderName) {
         try {
             if (!(message instanceof MimeMessage)) {
-                return false;
+                return new ProcessResult(false, null);
             }
             
             MimeMessage mimeMessage = (MimeMessage) message;
@@ -167,7 +190,7 @@ public class EmailReceiverService {
                 // Check if email already exists (idempotency)
                 if (messageRepository.findByImapUidAndImapFolder(uid, folderName).isPresent()) {
                     log.debug("Email already synced: UID={}, Folder={}", uid, folderName);
-                    return false; // Not an error, but not processed
+                    return new ProcessResult(false, uid); // Not an error, but not processed
                 }
             }
             
@@ -183,15 +206,22 @@ public class EmailReceiverService {
             
             // Publish event
             eventPublisher.publishNewEmailEvent(emailMessage);
-            
+
+            messageRepository.flush();
+
             log.info("Processed new email: {} from {}", emailMessage.getSubject(), emailMessage.getFrom());
             
-            return true; // Successfully processed
+            return new ProcessResult(true, uid > 0 ? uid : null);
             
         } catch (Exception e) {
             log.error("Error processing message", e);
-            return false;
+            return new ProcessResult(false, null);
         }
+    }
+    
+    @Transactional
+    public boolean processMessage(Message message, String folderName) {
+        return processMessageWithUid(message, folderName).success;
     }
     
     private EmailMessage convertToEmailMessage(MimeMessage message, long uid, String folderName) throws Exception {
@@ -310,8 +340,12 @@ public class EmailReceiverService {
         }
     }
     
-    public EmailMessage fetchEmailById(String messageId) {
-        return messageRepository.findById(messageId).orElse(null);
+    public EmailMessage fetchEmailByMessageId(String messageId) {
+        return messageRepository.findByMessageId(messageId).orElse(null);
+    }
+    
+    public EmailMessage fetchEmailById(Long id) {
+        return messageRepository.findById(id).orElse(null);
     }
     
     @EventListener

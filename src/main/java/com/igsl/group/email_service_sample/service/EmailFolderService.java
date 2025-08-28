@@ -59,7 +59,7 @@ public class EmailFolderService {
     }
     
     public EmailMessage moveToFolder(String messageId, Long folderId) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         EmailFolder folder = folderRepository.findById(folderId)
             .orElseThrow(() -> new FolderNotFoundException(folderId));
@@ -78,7 +78,7 @@ public class EmailFolderService {
     }
     
     public EmailMessage addLabel(String messageId, String label) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.getLabels().add(label);
@@ -86,7 +86,7 @@ public class EmailFolderService {
     }
     
     public EmailMessage removeLabel(String messageId, String label) {
-        EmailMessage email = messageRepository.findById(messageId)
+        EmailMessage email = messageRepository.findByMessageId(messageId)
             .orElseThrow(() -> new EmailNotFoundException(messageId));
         
         email.getLabels().remove(label);

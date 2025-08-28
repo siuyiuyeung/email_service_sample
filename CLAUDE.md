@@ -30,11 +30,11 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
    - `SecurityConfiguration`: Security settings for S/MIME
 
 2. **Model Layer** (`model` package)
-   - `EmailMessage`: Main email entity with marking properties
+   - `EmailMessage`: Main email entity with auto-generated ID and unique messageId
    - `EmailFolder`: Folder organization entity
    - `EmailAttachment`: Email attachment handling
    - `EmailCertificate`: S/MIME certificate management
-   - `EmailSyncState`: IMAP synchronization tracking
+   - `EmailSyncState`: IMAP synchronization tracking with UID tracking
 
 3. **Service Layer** (`service` package)
    - `EmailSenderService`: SMTP email sending with templates
@@ -178,6 +178,11 @@ The project uses Java 8. Ensure compatibility:
 - Use ByteArrayOutputStream instead of `InputStream.readAllBytes()`
 - Use traditional lambda syntax
 
+### Database Schema
+- EmailMessage uses auto-generated Long ID as primary key
+- messageId remains a unique business identifier
+- Proper indexes on messageId and imapUid/imapFolder for performance
+
 ### Service Implementation
 - Services are in `com.igsl.group.email_service_sample.service`
 - Use `@Service`, `@Transactional`, and `@Async` appropriately
@@ -186,6 +191,7 @@ The project uses Java 8. Ensure compatibility:
 - Progressive sync: Remaining messages are processed in subsequent scheduled jobs
 - Chronological order: Messages are processed oldest first to maintain proper sequence
 - Progress tracking: Sync state is updated after every message for precise resumption capability
+- UID tracking: Highest UID seen is tracked for efficient IMAP synchronization
 
 ### Repository Pattern
 - Repositories extend `JpaRepository`

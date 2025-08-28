@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface EmailMessageRepository extends JpaRepository<EmailMessage, String> {
+public interface EmailMessageRepository extends JpaRepository<EmailMessage, Long> {
     Page<EmailMessage> findByIsDeletedFalseOrderByReceivedDateDesc(Pageable pageable);
     
     Page<EmailMessage> findByFoldersContainingAndIsDeletedFalse(EmailFolder folder, Pageable pageable);
@@ -30,6 +30,8 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, Stri
     Page<EmailMessage> searchEmails(@Param("searchTerm") String searchTerm, Pageable pageable);
     
     Optional<EmailMessage> findByImapUidAndImapFolder(Long imapUid, String imapFolder);
+    
+    Optional<EmailMessage> findByMessageId(String messageId);
     
     long countByIsReadFalseAndIsDeletedFalse();
 }
