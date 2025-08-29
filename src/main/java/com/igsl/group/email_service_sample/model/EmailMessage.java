@@ -23,10 +23,10 @@ public class EmailMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, columnDefinition = "VARCHAR(1000)")
     private String messageId;
 
-    @Column(name = "from_address")
+    @Column(name = "from_address", length = 500)
     private String from;
 
     @Column(name = "to_addresses")
@@ -44,6 +44,7 @@ public class EmailMessage {
     @Builder.Default
     private List<String> bcc = new ArrayList<>();
     
+    @Column(length = 1000)
     private String subject;
     
     @Column(columnDefinition = "TEXT")
@@ -93,6 +94,7 @@ public class EmailMessage {
     
     // IMAP specific
     private Long imapUid;
+    @Column(length = 500)
     private String imapFolder;
     
     // S/MIME fields

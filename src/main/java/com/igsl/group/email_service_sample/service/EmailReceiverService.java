@@ -71,7 +71,7 @@ public class EmailReceiverService {
             
             log.info("Found {} new messages in folder {}. Processing up to {} messages in this job", 
                 totalMessages, folder.getName(), batchSize);
-            
+
             // Update sync state with total messages found
             syncState.setTotalMessagesFound((long) totalMessages);
             syncState.setMessagesProcessed(0L);
@@ -226,6 +226,13 @@ public class EmailReceiverService {
         if (message.getSentDate() != null) {
             emailMessage.setSentDate(
                 LocalDateTime.ofInstant(message.getSentDate().toInstant(), ZoneId.systemDefault())
+            );
+        }
+        
+        // Set received date
+        if (message.getReceivedDate() != null) {
+            emailMessage.setReceivedDate(
+                LocalDateTime.ofInstant(message.getReceivedDate().toInstant(), ZoneId.systemDefault())
             );
         }
         

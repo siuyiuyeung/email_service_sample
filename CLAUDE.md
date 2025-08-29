@@ -180,7 +180,8 @@ The project uses Java 8. Ensure compatibility:
 
 ### Database Schema
 - EmailMessage uses auto-generated Long ID as primary key
-- messageId remains a unique business identifier
+- messageId remains a unique business identifier (VARCHAR(1000) to support long message IDs)
+- Email fields support larger sizes: subject (1000), from (500), imapFolder (500)
 - Proper indexes on messageId and imapUid/imapFolder for performance
 
 ### Service Implementation
