@@ -34,9 +34,23 @@ public class EmailConfiguration {
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", emailProperties.getSmtp().isAuth());
         props.put("mail.smtp.starttls.enable", emailProperties.getSmtp().isStarttls());
+        props.put("mail.smtp.starttls.required", emailProperties.getSmtp().isStarttls());
         props.put("mail.smtp.connectiontimeout", emailProperties.getSmtp().getConnectionTimeout());
         props.put("mail.smtp.timeout", emailProperties.getSmtp().getTimeout());
         props.put("mail.debug", emailProperties.getGeneral().isDebugEnabled());
+        
+        // SSL/TLS Configuration
+        if (emailProperties.getSmtp().isSsl()) {
+            props.put("mail.smtp.ssl.enable", "true");
+            props.put("mail.smtp.socketFactory.port", emailProperties.getSmtp().getPort());
+            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+            props.put("mail.smtp.socketFactory.fallback", "false");
+        }
+        
+        // Trust all certificates (for testing only - remove in production)
+        if (emailProperties.getSmtp().isTrustAllCerts()) {
+            props.put("mail.smtp.ssl.trust", "*");
+        }
         
         return mailSender;
     }

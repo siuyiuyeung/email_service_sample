@@ -21,6 +21,8 @@ public class EmailProperties {
         private String password;
         private boolean auth = true;
         private boolean starttls = true;
+        private boolean ssl = false;
+        private boolean trustAllCerts = false;
         private int connectionTimeout = 5000;
         private int timeout = 5000;
     }
