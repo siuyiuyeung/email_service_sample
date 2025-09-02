@@ -13,7 +13,6 @@ import java.util.*;
 @AllArgsConstructor
 @Entity
 @Table(name = "email_messages", indexes = {
-    @Index(name = "idx_message_id", columnList = "messageId", unique = true),
     @Index(name = "idx_imap_uid_folder", columnList = "imapUid,imapFolder")
 })
 @EqualsAndHashCode(exclude = {"attachments", "folders"})
@@ -23,7 +22,7 @@ public class EmailMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(unique = true, nullable = false, columnDefinition = "VARCHAR(1000)")
+    @Column(columnDefinition = "VARCHAR(1000)")
     private String messageId;
 
     @Column(name = "from_address", length = 500)
@@ -56,7 +55,8 @@ public class EmailMessage {
     private LocalDateTime sentDate;
     private LocalDateTime receivedDate;
     
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @JoinColumn(name = "email_message_id")
     @Builder.Default
     private List<EmailAttachment> attachments = new ArrayList<>();
     

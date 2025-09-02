@@ -268,6 +268,7 @@ public class EmailReceiverService {
                 .contentType(part.getContentType())
                 .content(readAttachmentContent(part))
                 .size(part.getSize())
+                .emailMessage(emailMessage)  // Set the parent reference
                 .build();
             emailMessage.getAttachments().add(attachment);
         }
