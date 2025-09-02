@@ -207,6 +207,15 @@ public class EmailController {
         return ResponseEntity.ok(new UnreadCountResponse(count));
     }
     
+    // Test endpoint for attachment encoding
+    @PostMapping("/test-attachment")
+    public ResponseEntity<String> testAttachment(@RequestBody AttachmentRequest attachment) {
+        if (attachment.getContent() != null) {
+            return ResponseEntity.ok("Received " + attachment.getContent().length + " bytes for file: " + attachment.getFilename());
+        }
+        return ResponseEntity.ok("No content received");
+    }
+    
     // Helper methods
     private EmailMessage buildEmailMessage(EmailRequest request) {
         EmailMessage email = EmailMessage.builder()
@@ -234,7 +243,8 @@ public class EmailController {
                     .filename(att.getFilename())
                     .contentType(att.getContentType())
                     .content(att.getContent())
-                    .size(att.getContent().length)
+                    .size(att.getContent() != null ? att.getContent().length : 0)
+                    .emailMessage(email)  // Set parent reference
                     .build())
                 .collect(Collectors.toList());
             email.setAttachments(attachments);
