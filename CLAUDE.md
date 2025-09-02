@@ -8,10 +8,11 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
 
 ## Key Features
 
-- **Email Sending**: SMTP-based email sending with template support
+- **Email Sending**: SMTP-based email sending with template support and automatic sent folder storage
 - **Email Receiving**: IMAP polling with automatic synchronization and batch processing
 - **Email Management**: Mark emails as read/unread, flagged, important, spam
 - **Folder System**: Organize emails in folders (Inbox, Sent, Drafts, Trash, Spam, Custom)
+- **Sent Email Storage**: Automatically saves sent emails to Sent folder for complete email history
 - **Label System**: Add custom labels to emails for organization
 - **Duplicate Prevention**: Distributed locking mechanism for multi-instance deployments
 - **Batch Processing**: Configurable batch size for email synchronization with progress tracking
@@ -134,9 +135,10 @@ Edit `src/main/resources/application.properties` to configure:
 ## API Endpoints
 
 ### Email Operations
-- `POST /api/v1/emails/send` - Send email
+- `POST /api/v1/emails/send` - Send email (automatically saved to Sent folder)
 - `POST /api/v1/emails/send-template` - Send templated email
 - `GET /api/v1/emails/inbox` - Get inbox emails with pagination
+- `GET /api/v1/emails/sent` - Get sent emails with pagination
 - `GET /api/v1/emails/{id}` - Get specific email (uses auto-generated ID)
 - `GET /api/v1/emails/search?query=` - Search emails
 

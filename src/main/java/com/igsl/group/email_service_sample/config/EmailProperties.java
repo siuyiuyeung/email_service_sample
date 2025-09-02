@@ -34,6 +34,7 @@ public class EmailProperties {
         private String username;
         private String password;
         private String folder = "INBOX";
+        private String sentFolder = "Sent"; // IMAP sent folder name
         private boolean ssl = true;
         private int pollInterval = 60000; // 1 minute
         private Integer pollLockDurationMinutes; // Optional, defaults to 5 in scheduler

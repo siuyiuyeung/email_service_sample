@@ -17,6 +17,8 @@ public interface EmailMessageRepository extends JpaRepository<EmailMessage, Long
     
     Page<EmailMessage> findByFoldersContainingAndIsDeletedFalse(EmailFolder folder, Pageable pageable);
     
+    Page<EmailMessage> findByFoldersContainingAndIsDeletedFalseOrderBySentDateDesc(EmailFolder folder, Pageable pageable);
+    
     Page<EmailMessage> findByIsReadFalseAndIsDeletedFalse(Pageable pageable);
     
     Page<EmailMessage> findByIsFlaggedTrueAndIsDeletedFalse(Pageable pageable);

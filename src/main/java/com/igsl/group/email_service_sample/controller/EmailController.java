@@ -5,6 +5,7 @@ import com.igsl.group.email_service_sample.model.EmailAttachment;
 import com.igsl.group.email_service_sample.model.EmailFolder;
 import com.igsl.group.email_service_sample.model.EmailMessage;
 import com.igsl.group.email_service_sample.model.EmailStatus;
+import com.igsl.group.email_service_sample.model.FolderType;
 import com.igsl.group.email_service_sample.repository.EmailFolderRepository;
 import com.igsl.group.email_service_sample.repository.EmailMessageRepository;
 import com.igsl.group.email_service_sample.service.EmailDTOMapper;
@@ -87,6 +88,20 @@ public class EmailController {
                     emails = messageRepository.findByIsDeletedFalseOrderByReceivedDateDesc(pageable);
             }
         }
+        
+        return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
+    }
+    
+    @GetMapping("/sent")
+    public ResponseEntity<Page<EmailMessageSummaryDTO>> getSentEmails(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        EmailFolder sentFolder = folderRepository.findByType(FolderType.SENT)
+            .orElseThrow(() -> new RuntimeException("Sent folder not found"));
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<EmailMessage> emails = messageRepository.findByFoldersContainingAndIsDeletedFalseOrderBySentDateDesc(sentFolder, pageable);
         
         return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
     }
