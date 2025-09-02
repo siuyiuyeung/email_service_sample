@@ -58,9 +58,9 @@ public class EmailFolderService {
         return folderRepository.save(folder);
     }
     
-    public EmailMessage moveToFolder(String messageId, Long folderId) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage moveToFolder(Long id, Long folderId) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         EmailFolder folder = folderRepository.findById(folderId)
             .orElseThrow(() -> new FolderNotFoundException(folderId));
         
@@ -77,17 +77,17 @@ public class EmailFolderService {
         return messageRepository.save(email);
     }
     
-    public EmailMessage addLabel(String messageId, String label) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage addLabel(Long id, String label) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.getLabels().add(label);
         return messageRepository.save(email);
     }
     
-    public EmailMessage removeLabel(String messageId, String label) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage removeLabel(Long id, String label) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.getLabels().remove(label);
         return messageRepository.save(email);

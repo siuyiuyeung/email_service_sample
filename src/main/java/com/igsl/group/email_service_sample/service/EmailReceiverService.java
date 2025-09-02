@@ -325,9 +325,6 @@ public class EmailReceiverService {
         }
     }
     
-    public EmailMessage fetchEmailByMessageId(String messageId) {
-        return messageRepository.findByMessageId(messageId).orElse(null);
-    }
     
     public EmailMessage fetchEmailById(Long id) {
         return messageRepository.findById(id).orElse(null);

@@ -9,11 +9,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EmailResponse {
+    private Long id;
     private String messageId;
     private String status;
     private String errorMessage;
     
     public EmailResponse(EmailMessage emailMessage) {
+        this.id = emailMessage.getId();
         this.messageId = emailMessage.getMessageId();
         this.status = emailMessage.getStatus().toString();
         this.errorMessage = emailMessage.getErrorMessage();

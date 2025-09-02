@@ -137,26 +137,26 @@ Edit `src/main/resources/application.properties` to configure:
 - `POST /api/v1/emails/send` - Send email
 - `POST /api/v1/emails/send-template` - Send templated email
 - `GET /api/v1/emails/inbox` - Get inbox emails with pagination
-- `GET /api/v1/emails/{messageId}` - Get specific email
+- `GET /api/v1/emails/{id}` - Get specific email (uses auto-generated ID)
 - `GET /api/v1/emails/search?query=` - Search emails
 
 ### Email Marking
-- `PUT /api/v1/emails/{messageId}/mark-read` - Mark as read
-- `PUT /api/v1/emails/{messageId}/mark-unread` - Mark as unread
-- `PUT /api/v1/emails/{messageId}/toggle-flag` - Toggle flag
-- `PUT /api/v1/emails/{messageId}/mark-important` - Mark as important
-- `PUT /api/v1/emails/{messageId}/mark-spam` - Mark as spam
-- `PUT /api/v1/emails/bulk/mark-read` - Bulk mark as read
+- `PUT /api/v1/emails/{id}/mark-read` - Mark as read
+- `PUT /api/v1/emails/{id}/mark-unread` - Mark as unread
+- `PUT /api/v1/emails/{id}/toggle-flag` - Toggle flag
+- `PUT /api/v1/emails/{id}/mark-important` - Mark as important
+- `PUT /api/v1/emails/{id}/mark-spam` - Mark as spam
+- `PUT /api/v1/emails/bulk/mark-read` - Bulk mark as read (accepts array of IDs)
 
 ### Folder Management
 - `GET /api/v1/emails/folders` - Get all folders
 - `POST /api/v1/emails/folders` - Create custom folder
 - `GET /api/v1/emails/folder/{folderId}` - Get emails in folder
-- `PUT /api/v1/emails/{messageId}/move-to-folder/{folderId}` - Move to folder
+- `PUT /api/v1/emails/{id}/move-to-folder/{folderId}` - Move to folder
 
 ### Labels
-- `PUT /api/v1/emails/{messageId}/labels/{label}` - Add label
-- `DELETE /api/v1/emails/{messageId}/labels/{label}` - Remove label
+- `PUT /api/v1/emails/{id}/labels/{label}` - Add label
+- `DELETE /api/v1/emails/{id}/labels/{label}` - Remove label
 
 ### Statistics
 - `GET /api/v1/emails/stats/unread-count` - Get unread count

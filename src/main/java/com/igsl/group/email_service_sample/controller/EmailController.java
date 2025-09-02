@@ -117,49 +117,49 @@ public class EmailController {
         return ResponseEntity.ok(dtoMapper.toEmailMessageSummaryDTOPage(emails));
     }
     
-    @GetMapping("/{messageId}")
-    public ResponseEntity<EmailMessageDTO> getEmail(@PathVariable String messageId) {
-        EmailMessage email = receiverService.fetchEmailByMessageId(messageId);
+    @GetMapping("/{id}")
+    public ResponseEntity<EmailMessageDTO> getEmail(@PathVariable Long id) {
+        EmailMessage email = receiverService.fetchEmailById(id);
         if (email != null && !email.isRead()) {
-            markingService.markAsRead(messageId);
+            markingService.markAsRead(id);
         }
         return email != null ? ResponseEntity.ok(dtoMapper.toEmailMessageDTO(email)) : ResponseEntity.notFound().build();
     }
     
     // Marking endpoints
-    @PutMapping("/{messageId}/mark-read")
-    public ResponseEntity<EmailMessageDTO> markAsRead(@PathVariable String messageId) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsRead(messageId)));
+    @PutMapping("/{id}/mark-read")
+    public ResponseEntity<EmailMessageDTO> markAsRead(@PathVariable Long id) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsRead(id)));
     }
     
-    @PutMapping("/{messageId}/mark-unread")
-    public ResponseEntity<EmailMessageDTO> markAsUnread(@PathVariable String messageId) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsUnread(messageId)));
+    @PutMapping("/{id}/mark-unread")
+    public ResponseEntity<EmailMessageDTO> markAsUnread(@PathVariable Long id) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsUnread(id)));
     }
     
-    @PutMapping("/{messageId}/toggle-flag")
-    public ResponseEntity<EmailMessageDTO> toggleFlag(@PathVariable String messageId) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.toggleFlag(messageId)));
+    @PutMapping("/{id}/toggle-flag")
+    public ResponseEntity<EmailMessageDTO> toggleFlag(@PathVariable Long id) {
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.toggleFlag(id)));
     }
     
-    @PutMapping("/{messageId}/mark-important")
+    @PutMapping("/{id}/mark-important")
     public ResponseEntity<EmailMessageDTO> markAsImportant(
-            @PathVariable String messageId,
+            @PathVariable Long id,
             @RequestParam boolean important) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsImportant(messageId, important)));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsImportant(id, important)));
     }
     
-    @PutMapping("/{messageId}/mark-spam")
+    @PutMapping("/{id}/mark-spam")
     public ResponseEntity<EmailMessageDTO> markAsSpam(
-            @PathVariable String messageId,
+            @PathVariable Long id,
             @RequestParam boolean spam) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsSpam(messageId, spam)));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(markingService.markAsSpam(id, spam)));
     }
     
     // Bulk operations
     @PutMapping("/bulk/mark-read")
-    public ResponseEntity<Void> markMultipleAsRead(@RequestBody List<String> messageIds) {
-        markingService.markMultipleAsRead(messageIds);
+    public ResponseEntity<Void> markMultipleAsRead(@RequestBody List<Long> ids) {
+        markingService.markMultipleAsRead(ids);
         return ResponseEntity.ok().build();
     }
     
@@ -178,26 +178,26 @@ public class EmailController {
         return ResponseEntity.ok(dtoMapper.toEmailFolderDTO(folder));
     }
     
-    @PutMapping("/{messageId}/move-to-folder/{folderId}")
+    @PutMapping("/{id}/move-to-folder/{folderId}")
     public ResponseEntity<EmailMessageDTO> moveToFolder(
-            @PathVariable String messageId,
+            @PathVariable Long id,
             @PathVariable Long folderId) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.moveToFolder(messageId, folderId)));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.moveToFolder(id, folderId)));
     }
     
     // Labels
-    @PutMapping("/{messageId}/labels/{label}")
+    @PutMapping("/{id}/labels/{label}")
     public ResponseEntity<EmailMessageDTO> addLabel(
-            @PathVariable String messageId,
+            @PathVariable Long id,
             @PathVariable String label) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.addLabel(messageId, label)));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.addLabel(id, label)));
     }
     
-    @DeleteMapping("/{messageId}/labels/{label}")
+    @DeleteMapping("/{id}/labels/{label}")
     public ResponseEntity<EmailMessageDTO> removeLabel(
-            @PathVariable String messageId,
+            @PathVariable Long id,
             @PathVariable String label) {
-        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.removeLabel(messageId, label)));
+        return ResponseEntity.ok(dtoMapper.toEmailMessageDTO(folderService.removeLabel(id, label)));
     }
     
     // Statistics

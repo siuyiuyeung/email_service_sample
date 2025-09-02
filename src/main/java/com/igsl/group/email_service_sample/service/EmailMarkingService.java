@@ -25,9 +25,9 @@ public class EmailMarkingService {
     private final EmailFolderRepository folderRepository;
     private final Store imapStore;
     
-    public EmailMessage markAsRead(String messageId) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage markAsRead(Long id) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.setRead(true);
         email.setReadDate(LocalDateTime.now());
@@ -38,9 +38,9 @@ public class EmailMarkingService {
         return messageRepository.save(email);
     }
     
-    public EmailMessage markAsUnread(String messageId) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage markAsUnread(Long id) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.setRead(false);
         email.setReadDate(null);
@@ -51,9 +51,9 @@ public class EmailMarkingService {
         return messageRepository.save(email);
     }
     
-    public EmailMessage toggleFlag(String messageId) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage toggleFlag(Long id) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.setFlagged(!email.isFlagged());
         email.setFlaggedDate(email.isFlagged() ? LocalDateTime.now() : null);
@@ -64,17 +64,17 @@ public class EmailMarkingService {
         return messageRepository.save(email);
     }
     
-    public EmailMessage markAsImportant(String messageId, boolean important) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage markAsImportant(Long id, boolean important) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.setImportant(important);
         return messageRepository.save(email);
     }
     
-    public EmailMessage markAsSpam(String messageId, boolean spam) {
-        EmailMessage email = messageRepository.findByMessageId(messageId)
-            .orElseThrow(() -> new EmailNotFoundException(messageId));
+    public EmailMessage markAsSpam(Long id, boolean spam) {
+        EmailMessage email = messageRepository.findById(id)
+            .orElseThrow(() -> new EmailNotFoundException(id));
         
         email.setSpam(spam);
         
@@ -89,9 +89,9 @@ public class EmailMarkingService {
         return messageRepository.save(email);
     }
     
-    public void markMultipleAsRead(List<String> messageIds) {
-        messageIds.forEach(messageId -> {
-            messageRepository.findByMessageId(messageId).ifPresent(email -> {
+    public void markMultipleAsRead(List<Long> ids) {
+        ids.forEach(id -> {
+            messageRepository.findById(id).ifPresent(email -> {
                 email.setRead(true);
                 email.setReadDate(LocalDateTime.now());
                 updateImapFlag(email, Flags.Flag.SEEN, true);
