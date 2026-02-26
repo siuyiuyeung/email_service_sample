@@ -59,6 +59,8 @@ public class EmailDTOMapper {
                 .signatureValid(entity.isSignatureValid())
                 .signerEmail(entity.getSignerEmail())
                 .signatureTimestamp(entity.getSignatureTimestamp())
+                .smimeStatus(entity.getSmimeStatus())
+                .smimeErrors(entity.getSmimeErrors())
                 .build();
     }
     

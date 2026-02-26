@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.igsl.group.email_service_sample.model.SmimeStatus;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -55,4 +57,6 @@ public class EmailMessageDTO {
     private boolean signatureValid;
     private String signerEmail;
     private LocalDateTime signatureTimestamp;
+    private SmimeStatus smimeStatus;
+    private String smimeErrors;
 }

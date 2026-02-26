@@ -34,7 +34,7 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
    - `EmailMessage`: Main email entity with auto-generated ID and unique messageId
    - `EmailFolder`: Folder organization entity
    - `EmailAttachment`: Email attachment handling
-   - `EmailCertificate`: S/MIME certificate management
+   - `Certificate`: S/MIME certificate management
    - `EmailSyncState`: IMAP synchronization tracking with UID tracking
 
 3. **Service Layer** (`service` package)
@@ -44,17 +44,19 @@ This is a fully implemented Spring Boot email service that demonstrates how to s
    - `EmailFolderService`: Folder and label management
    - `DistributedLockService`: Duplicate prevention locking
    - `EmailDTOMapper`: Entity to DTO conversion service
-   - `SMimeService`: S/MIME encryption/signing (structure ready)
+   - `SMimeService`: S/MIME encryption, signing, decryption, and certificate management
 
 4. **REST API Layer** (`controller` package)
    - `EmailController`: REST endpoints for all email operations
    - `EmailPollingController`: REST endpoints for manual polling control
    - `LockManagementController`: REST endpoints for lock management
+   - `SmimeCertificateController`: REST endpoints for S/MIME certificate management
    - `EmailExceptionHandler`: Global exception handling
 
 5. **Scheduler Layer** (`scheduler` package)
    - `EmailPollingScheduler`: Handles scheduled email polling
    - `LockCleanupScheduler`: Handles scheduled lock cleanup
+   - `CertificateValidationScheduler`: Daily job to mark expired S/MIME certificates
    - `SchedulerConfiguration`: Enables Spring scheduling
 
 6. **Event System** (`event` package)
@@ -172,13 +174,23 @@ Edit `src/main/resources/application.properties` to configure:
 ### Lock Management
 - `POST /api/v1/locks/cleanup` - Manually trigger cleanup of expired locks
 
+### S/MIME Certificate Management
+- `GET /api/v1/smime/certificates` - List all stored certificates
+- `GET /api/v1/smime/certificates/{id}` - Get a specific certificate
+- `POST /api/v1/smime/certificates` - Import a PEM-encoded certificate
+- `PUT /api/v1/smime/certificates/{id}/trust?trusted=true` - Set trusted flag
+- `DELETE /api/v1/smime/certificates/{id}` - Delete a certificate
+- `POST /api/v1/smime/certificates/validate` - Trigger expiry check on all certificates
+
 ## Development Guidelines
 
 ### Java 8 Compatibility
 The project uses Java 8. Ensure compatibility:
 - Avoid using `var` keyword
-- Use ByteArrayOutputStream instead of `InputStream.readAllBytes()`
+- Use `ByteArrayOutputStream` + read loop instead of `InputStream.readAllBytes()`
 - Use traditional lambda syntax
+- `MimeBodyPart` has no `saveChanges()` — only `MimeMessage` does
+- When chaining Bouncy Castle builder methods (e.g. `setProvider()`), be aware some return the parent type — split declaration and chained call onto separate lines
 
 ### Database Schema
 - EmailMessage uses auto-generated Long ID as primary key
@@ -195,6 +207,8 @@ The project uses Java 8. Ensure compatibility:
 - Chronological order: Messages are processed oldest first to maintain proper sequence
 - Progress tracking: Sync state is updated after every message for precise resumption capability
 - UID tracking: Highest UID seen is tracked for efficient IMAP synchronization
+- `@Transactional` on `private` methods is never applied by Spring AOP — use it only on public/protected methods
+- Self-invocation (`this.method()`) bypasses Spring's transaction proxy — avoid `@Transactional` on methods called internally from within the same bean
 
 ### Repository Pattern
 - Repositories extend `JpaRepository`
@@ -211,20 +225,26 @@ The project uses Java 8. Ensure compatibility:
 - Mock external dependencies with `@MockBean`
 - Test naming convention: `*Tests.java`
 
-## Pending Implementation
+## S/MIME Implementation Notes
 
-### S/MIME Service
-The S/MIME service structure is in place but needs full implementation:
-1. Certificate management operations
-2. Email signing logic
-3. Email encryption/decryption logic
-4. Certificate validation and trust chain
+S/MIME is fully implemented and disabled by default (`email.smime.enabled=false`).
 
-To complete S/MIME:
-- Implement `SMimeService` methods
-- Add Bouncy Castle provider initialization
-- Create certificate storage mechanism
-- Implement certificate discovery from emails
+### How S/MIME works in this service
+- **Outgoing**: `EmailSenderService` calls `smimeService.prepareOutgoing()` after building the `MimeMessage`. It signs first (if a private key is loaded), then encrypts for each recipient that has a stored certificate.
+- **Incoming**: `EmailReceiverService` calls `smimeService.processIncoming()` before extracting text/HTML content. This decrypts the message first (if encrypted), then verifies the signature. The decrypted `MimeMessage` is used for content extraction so the stored text/HTML is always plaintext.
+- S/MIME status is stored on `EmailMessage` (fields: `isSigned`, `isEncrypted`, `signatureValid`, `signerEmail`, `signerCertificateThumbprint`, `smimeStatus`, `smimeErrors`).
+
+### Certificate storage
+- `Certificate` entity in the `certificates` table — one record per email address (unique constraint).
+- `persistCertificate()` uses an update-in-place strategy: checks by thumbprint first, then falls back to finding by email address and updating the existing record to avoid unique-constraint violations.
+- Signer certificates are auto-discovered from signed received emails when `email.smime.auto-download-certificates=true`.
+- Own certificate is imported into the DB automatically on startup.
+
+### Enabling S/MIME
+1. Generate or obtain a PKCS12 keystore containing your private key and certificate.
+2. Set environment variables `SMIME_KEYSTORE_PATH` and `SMIME_KEYSTORE_PASSWORD`.
+3. Set `email.smime.enabled=true` in `application.properties`.
+4. Import recipient public certificates via `POST /api/v1/smime/certificates` before sending encrypted mail.
 
 ## Troubleshooting
 
@@ -233,6 +253,9 @@ To complete S/MIME:
 2. **IMAP not connecting**: Verify IMAP settings and SSL/TLS configuration
 3. **Duplicate emails**: Ensure distributed lock service is working
 4. **H2 database locked**: Stop all application instances before accessing H2 console
+5. **S/MIME signing fails on startup**: Check `SMIME_KEYSTORE_PATH` exists and `SMIME_KEYSTORE_PASSWORD` is correct; the service degrades gracefully (warning logged, emails still send unsigned)
+6. **S/MIME encryption fails**: No certificate is stored for the recipient — import their public certificate first via `POST /api/v1/smime/certificates`; if `email.smime.require-encryption=false` (default) the email is sent signed-only
+7. **Decryption failed status on received email**: The private key in the keystore does not match the encryption recipient — verify the correct keystore is configured
 
 ### Debug Mode
 Enable debug logging by setting in `application.properties`:

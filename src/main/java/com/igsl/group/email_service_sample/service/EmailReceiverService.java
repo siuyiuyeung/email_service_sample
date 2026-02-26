@@ -39,6 +39,7 @@ public class EmailReceiverService {
     private final EmailSyncStateRepository syncStateRepository;
     private final EmailEventPublisher eventPublisher;
     private final DistributedLockService lockService;
+    private final SMimeService smimeService;
     
     /**
      * Performs email synchronization from IMAP server.
@@ -159,22 +160,38 @@ public class EmailReceiverService {
             if (!(message instanceof MimeMessage)) {
                 return new ProcessResult(false, null);
             }
-            
+
             MimeMessage mimeMessage = (MimeMessage) message;
             long uid = -1;
-            
+
             if (message.getFolder() instanceof UIDFolder) {
                 uid = ((UIDFolder) message.getFolder()).getUID(message);
-                
+
                 // Check if email already exists (idempotency)
                 if (messageRepository.findByImapUidAndImapFolder(uid, folderName).isPresent()) {
                     log.debug("Email already synced: UID={}, Folder={}", uid, folderName);
                     return new ProcessResult(false, uid); // Not an error, but not processed
                 }
             }
-            
-            // Convert and save email
-            EmailMessage emailMessage = convertToEmailMessage(mimeMessage, uid, folderName);
+
+            // Run S/MIME processing before content extraction so the plaintext is used
+            SMimeService.IncomingSmimeResult smime = smimeService.processIncoming(mimeMessage);
+            MimeMessage messageForExtraction = smime.getProcessedMessage();
+
+            // Convert and save email (using potentially decrypted message for content)
+            EmailMessage emailMessage = convertToEmailMessage(messageForExtraction, uid, folderName);
+
+            // Apply S/MIME metadata to the entity
+            emailMessage.setSigned(smime.isSigned());
+            emailMessage.setEncrypted(smime.isEncrypted());
+            emailMessage.setSignatureValid(smime.isSignatureValid());
+            emailMessage.setSignerEmail(smime.getSignerEmail());
+            emailMessage.setSignerCertificateThumbprint(smime.getCertificateThumbprint());
+            emailMessage.setSmimeStatus(smime.getStatus());
+            emailMessage.setSmimeErrors(smime.getError());
+            if (smime.isSigned()) {
+                emailMessage.setSignatureTimestamp(java.time.LocalDateTime.now());
+            }
             
             // Assign to inbox folder
             EmailFolder inboxFolder = folderRepository.findByType(FolderType.INBOX)

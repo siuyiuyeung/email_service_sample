@@ -6,6 +6,7 @@ import com.igsl.group.email_service_sample.model.EmailFolder;
 import com.igsl.group.email_service_sample.model.EmailMessage;
 import com.igsl.group.email_service_sample.model.EmailStatus;
 import com.igsl.group.email_service_sample.model.FolderType;
+import com.igsl.group.email_service_sample.model.SmimeStatus;
 import com.igsl.group.email_service_sample.repository.EmailFolderRepository;
 import com.igsl.group.email_service_sample.repository.EmailMessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class EmailSenderService {
     private final EmailMessageRepository messageRepository;
     private final EmailFolderRepository folderRepository;
     private final Store imapStore;
+    private final SMimeService smimeService;
     
     @Async("emailTaskExecutor")
     @Transactional
@@ -44,9 +46,32 @@ public class EmailSenderService {
             if (emailMessage.getFrom() == null) {
                 emailMessage.setFrom(properties.getGeneral().getFromAddress());
             }
-            
+
             MimeMessage message = createMimeMessage(emailMessage);
-            
+
+            // Apply S/MIME signing/encryption when enabled
+            if (properties.getSmime().isEnabled()) {
+                try {
+                    message = smimeService.prepareOutgoing(message, emailMessage.getTo());
+                    // Determine actual status from the resulting message content type
+                    String ct = message.getContentType().toLowerCase();
+                    boolean outEncrypted = ct.contains("application/pkcs7-mime") && ct.contains("enveloped-data");
+                    boolean outSigned = ct.contains("multipart/signed") || ct.contains("signed-data");
+                    if (outEncrypted) {
+                        // prepareOutgoing always signs before encrypting, so both are applied
+                        emailMessage.setSigned(true);
+                        emailMessage.setEncrypted(true);
+                        emailMessage.setSmimeStatus(SmimeStatus.SIGNED_AND_ENCRYPTED);
+                    } else if (outSigned) {
+                        emailMessage.setSigned(true);
+                        emailMessage.setSmimeStatus(SmimeStatus.SIGNED);
+                    }
+                } catch (Exception e) {
+                    log.warn("S/MIME processing failed for outgoing email, sending unsigned: {}", e.getMessage());
+                    emailMessage.setSmimeErrors(e.getMessage());
+                }
+            }
+
             // Send the email
             mailSender.send(message);
             
